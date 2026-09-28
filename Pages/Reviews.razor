@@ -1,0 +1,638 @@
+@page "/reviews"
+
+@using DiscoverPhilippines.Models
+@using DiscoverPhilippines.Services
+
+@inject ReviewService ReviewService
+
+
+<div class="relative min-h-screen w-full overflow-hidden bg-ocean px-[8%] pb-24 pt-28">
+
+    <!-- BACKGROUND -->
+    <div class="absolute inset-0 z-0">
+
+        <img src="images/ph.jpg"
+             alt="Philippines Background"
+             class="h-full w-full object-cover object-center" />
+
+        <div class="absolute inset-0 bg-gradient-to-b from-ocean/85 via-ocean/80 to-ocean/95"></div>
+
+    </div>
+
+
+    <!-- MAIN CONTENT -->
+    <div class="relative z-10 mx-auto max-w-5xl">
+
+        <!-- HEADER -->
+        <div class="mb-10 text-center">
+
+            <span class="mb-2 block text-sm font-bold uppercase tracking-[2px] text-gold">
+                Share Your Experience
+            </span>
+
+            <h1 class="mb-3 font-display text-4xl font-bold text-white md:text-5xl">
+                Rate Your Adventure
+            </h1>
+
+            <p class="mx-auto max-w-2xl text-slate-300">
+                Rate a destination, leave a comment, and see what other visitors have shared.
+            </p>
+
+        </div>
+
+
+        <!-- ========================================= -->
+        <!-- REVIEW FORM -->
+        <!-- ========================================= -->
+
+        <div class="mx-auto mb-16 max-w-2xl rounded-3xl bg-white p-7 shadow-2xl md:p-9">
+
+            <h2 class="mb-6 font-display text-2xl font-bold text-ocean">
+                Write a Review
+            </h2>
+
+
+            <!-- DESTINATION TO REVIEW -->
+            <div class="mb-6">
+
+                <label class="mb-2 block font-semibold text-ocean">
+                    Destination
+                </label>
+
+                <div class="relative">
+
+                    <select @bind="selectedDestination"
+                            class="w-full appearance-none rounded-xl border border-slate-300 bg-white px-4 py-3 pr-12 text-slate-700 outline-none transition focus:border-gold focus:ring-2 focus:ring-gold/30">
+
+                        @foreach (var destination in destinations)
+                        {
+                            <option value="@destination">
+                                @destination
+                            </option>
+                        }
+
+                    </select>
+
+
+                    <!-- Arrow -->
+                    <div class="pointer-events-none absolute inset-y-0 right-4 flex items-center">
+
+                        <svg class="h-4 w-4 text-slate-600"
+                             xmlns="http://www.w3.org/2000/svg"
+                             fill="none"
+                             viewBox="0 0 24 24"
+                             stroke="currentColor"
+                             stroke-width="2.5">
+
+                            <path stroke-linecap="round"
+                                  stroke-linejoin="round"
+                                  d="M6 9l6 6 6-6" />
+
+                        </svg>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- RATING -->
+            <div class="mb-6">
+
+                <label class="mb-3 block font-semibold text-ocean">
+                    Your Rating
+                </label>
+
+                <div class="flex items-center gap-2">
+
+                    @for (int i = 1; i <= 5; i++)
+                    {
+                        int star = i;
+
+                        <button type="button"
+                                @onclick="() => SetRating(star)"
+                                class="text-4xl transition duration-200 hover:scale-125">
+
+                            <span class="@(star <= selectedRating ? "text-gold" : "text-slate-300")">
+                                ★
+                            </span>
+
+                        </button>
+                    }
+
+                </div>
+
+
+                @if (selectedRating > 0)
+                {
+                    <p class="mt-2 text-sm font-semibold text-gold">
+                        @GetRatingText()
+                    </p>
+                }
+
+            </div>
+
+
+            <!-- COMMENT -->
+            <div class="mb-6">
+
+                <label class="mb-2 block font-semibold text-ocean">
+                    Comment
+                </label>
+
+                <textarea @bind="newComment"
+                          @bind:event="oninput"
+                          rows="5"
+                          maxlength="300"
+                          placeholder="Share your experience..."
+                          class="w-full resize-none rounded-xl border border-slate-300 px-4 py-3 text-slate-700 outline-none transition focus:border-gold focus:ring-2 focus:ring-gold/30">
+                </textarea>
+
+                <div class="mt-1 text-right text-xs text-slate-400">
+                    @newComment.Length / 300
+                </div>
+
+            </div>
+
+
+            <!-- SUBMIT -->
+            <button @onclick="SubmitReview"
+                    disabled="@(!CanSubmit)"
+                    class="w-full rounded-full bg-gold px-6 py-3 font-bold text-black transition duration-300 hover:bg-gold-hover disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500">
+
+                Submit Review
+
+            </button>
+
+
+            <!-- SUCCESS MESSAGE -->
+            @if (showSuccessMessage)
+            {
+                <div class="mt-4 rounded-xl bg-green-100 px-4 py-3 text-center text-sm font-semibold text-green-700">
+                    Your review has been added successfully.
+                </div>
+            }
+
+        </div>
+
+
+
+        <!-- ========================================= -->
+        <!-- USER REVIEWS -->
+        <!-- ========================================= -->
+
+        <div>
+
+            <!-- Review Header -->
+            <div class="mb-6 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+
+                <div>
+
+                    <span class="text-sm font-bold uppercase tracking-[2px] text-gold">
+                        Visitor Experiences
+                    </span>
+
+                    <h2 class="mt-1 font-display text-3xl font-bold text-white">
+                        User Reviews
+                    </h2>
+
+                    <p class="mt-1 text-sm text-slate-400">
+                        Browse all reviews or select a specific destination.
+                    </p>
+
+                </div>
+
+
+                <!-- REVIEW FILTER -->
+                <div class="w-full md:w-[280px]">
+
+                    <label class="mb-2 block text-sm font-semibold text-white">
+                        Filter Reviews
+                    </label>
+
+                    <div class="relative">
+
+                        <select value="@selectedReviewFilter"
+                                @onchange="ReviewFilterChanged"
+                                class="w-full appearance-none rounded-xl border border-white/20 bg-white px-5 py-3 pr-12 font-semibold text-ocean outline-none transition focus:border-gold focus:ring-2 focus:ring-gold/30">
+
+                            <option value="All">
+                                All Destinations
+                            </option>
+
+                            @foreach (var destination in destinations)
+                            {
+                                <option value="@destination">
+                                    @destination
+                                </option>
+                            }
+
+                        </select>
+
+
+                        <!-- Arrow -->
+                        <div class="pointer-events-none absolute inset-y-0 right-4 flex items-center">
+
+                            <svg class="h-4 w-4 text-slate-600"
+                                 xmlns="http://www.w3.org/2000/svg"
+                                 fill="none"
+                                 viewBox="0 0 24 24"
+                                 stroke="currentColor"
+                                 stroke-width="2.5">
+
+                                <path stroke-linecap="round"
+                                      stroke-linejoin="round"
+                                      d="M6 9l6 6 6-6" />
+
+                            </svg>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- REVIEW COUNT -->
+            <div class="mb-5">
+
+                <span class="inline-block rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-gold backdrop-blur">
+
+                    @FilteredReviews.Count Review@(FilteredReviews.Count == 1 ? "" : "s")
+
+                    @if (selectedReviewFilter != "All")
+                    {
+                        <span>
+                            for @selectedReviewFilter
+                        </span>
+                    }
+
+                </span>
+
+            </div>
+
+
+            <!-- NO REVIEWS -->
+            @if (FilteredReviews.Count == 0)
+            {
+                <div class="rounded-3xl border border-white/10 bg-white/5 p-10 text-center backdrop-blur">
+
+                    
+
+                    <h3 class="mb-2 text-xl font-bold text-white">
+                        No reviews yet
+                    </h3>
+
+                    @if (selectedReviewFilter == "All")
+                    {
+                        <p class="text-slate-400">
+                            Be the first to share your experience.
+                        </p>
+                    }
+                    else
+                    {
+                        <p class="text-slate-400">
+                            Be the first to review @selectedReviewFilter.
+                        </p>
+                    }
+
+                </div>
+            }
+            else
+            {
+                <!-- REVIEW CARDS -->
+                <div class="grid gap-5">
+
+                    @foreach (var review in PaginatedReviews)
+                    {
+                        <div class="rounded-3xl bg-white p-6 shadow-xl">
+
+                            <div class="mb-4 flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+
+                                <div>
+
+                                    <!-- Destination -->
+                                    <span class="mb-1 block text-xs font-bold uppercase tracking-[1.5px] text-gold">
+                                        Destination
+                                    </span>
+
+                                    <h3 class="font-display text-xl font-bold text-ocean">
+                                        @review.Destination
+                                    </h3>
+
+
+                                    <!-- Review Stars -->
+                                    <div class="mt-2 flex">
+
+                                        @for (int star = 1; star <= 5; star++)
+                                        {
+                                            <span class="text-xl @(star <= review.Rating ? "text-gold" : "text-slate-300")">
+                                                ★
+                                            </span>
+                                        }
+
+                                    </div>
+
+                                </div>
+
+
+                                <!-- REMOVE -->
+                                <button @onclick="() => RemoveReview(review.Id)"
+                                        class="rounded-full border border-red-200 px-4 py-2 text-sm font-semibold text-red-500 transition hover:bg-red-50">
+
+                                    Remove
+
+                                </button>
+
+                            </div>
+
+
+                            <!-- Comment -->
+                            <p class="break-words leading-7 text-slate-600">
+                                @review.Comment
+                            </p>
+
+                        </div>
+                    }
+
+                </div>
+
+
+                <!-- PAGINATION -->
+                @if (TotalPages > 1)
+                {
+                    <div class="mt-8 flex flex-wrap items-center justify-center gap-4">
+
+                        <!-- Previous -->
+                        <button @onclick="PreviousPage"
+                                disabled="@(currentPage == 1)"
+                                class="rounded-full bg-white px-5 py-2 font-semibold text-ocean transition hover:bg-gold disabled:cursor-not-allowed disabled:opacity-40">
+
+                            ← Previous
+
+                        </button>
+
+
+                        <!-- Page -->
+                        <span class="rounded-full bg-white/10 px-5 py-2 text-sm font-semibold text-white backdrop-blur">
+
+                            Page @currentPage of @TotalPages
+
+                        </span>
+
+
+                        <!-- Next -->
+                        <button @onclick="NextPage"
+                                disabled="@(currentPage >= TotalPages)"
+                                class="rounded-full bg-white px-5 py-2 font-semibold text-ocean transition hover:bg-gold disabled:cursor-not-allowed disabled:opacity-40">
+
+                            Next →
+
+                        </button>
+
+                    </div>
+                }
+            }
+
+        </div>
+
+    </div>
+
+</div>
+
+
+@code {
+
+    // =========================================
+    // DESTINATIONS
+    // =========================================
+
+    private readonly List<string> destinations = new()
+    {
+        "El Nido",
+        "Boracay Island",
+        "Chocolate Hills"
+    };
+
+
+    // =========================================
+    // REVIEW FORM
+    // =========================================
+
+    private string selectedDestination = "El Nido";
+
+    private int selectedRating = 0;
+
+    private string newComment = "";
+
+    private bool showSuccessMessage = false;
+
+
+    // =========================================
+    // REVIEW FILTER
+    // =========================================
+
+    private string selectedReviewFilter = "All";
+
+
+    // =========================================
+    // PAGINATION
+    // =========================================
+
+    private int currentPage = 1;
+
+    private const int reviewsPerPage = 5;
+
+
+    // =========================================
+    // FORM VALIDATION
+    // =========================================
+
+    private bool CanSubmit =>
+        selectedRating > 0 &&
+        !string.IsNullOrWhiteSpace(newComment);
+
+
+    // =========================================
+    // FILTERED REVIEWS
+    // =========================================
+
+    private List<Review> FilteredReviews
+    {
+        get
+        {
+            IEnumerable<Review> reviews =
+                ReviewService.GetAllReviews();
+
+
+            if (selectedReviewFilter != "All")
+            {
+                reviews = reviews.Where(review =>
+                    review.Destination.Equals(
+                        selectedReviewFilter,
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                );
+            }
+
+
+            return reviews
+                .Reverse()
+                .ToList();
+        }
+    }
+
+
+    // =========================================
+    // TOTAL PAGES
+    // =========================================
+
+    private int TotalPages =>
+        Math.Max(
+            1,
+            (int)Math.Ceiling(
+                FilteredReviews.Count / (double)reviewsPerPage
+            )
+        );
+
+
+    // =========================================
+    // PAGINATED REVIEWS
+    // =========================================
+
+    private IEnumerable<Review> PaginatedReviews =>
+        FilteredReviews
+            .Skip((currentPage - 1) * reviewsPerPage)
+            .Take(reviewsPerPage);
+
+
+    // =========================================
+    // SET STAR RATING
+    // =========================================
+
+    private void SetRating(int rating)
+    {
+        selectedRating = rating;
+
+        showSuccessMessage = false;
+    }
+
+
+    // =========================================
+    // RATING TEXT
+    // =========================================
+
+    private string GetRatingText()
+    {
+        return selectedRating switch
+        {
+            1 => "1 Star - Poor",
+
+            2 => "2 Stars - Fair",
+
+            3 => "3 Stars - Good",
+
+            4 => "4 Stars - Very Good",
+
+            5 => "5 Stars - Excellent",
+
+            _ => ""
+        };
+    }
+
+
+    // =========================================
+    // SUBMIT REVIEW
+    // =========================================
+
+    private void SubmitReview()
+    {
+        if (!CanSubmit)
+        {
+            return;
+        }
+
+
+        ReviewService.AddReview(
+            selectedDestination,
+            selectedRating,
+            newComment.Trim()
+        );
+
+
+        selectedRating = 0;
+
+        newComment = "";
+
+        showSuccessMessage = true;
+
+
+        /*
+         * If the user is filtering another destination,
+         * change the filter to the destination they just reviewed
+         * so they can immediately see their new review.
+         */
+        selectedReviewFilter = selectedDestination;
+
+        currentPage = 1;
+    }
+
+
+    // =========================================
+    // REMOVE REVIEW
+    // =========================================
+
+    private void RemoveReview(int id)
+    {
+        ReviewService.RemoveReview(id);
+
+
+        if (currentPage > TotalPages)
+        {
+            currentPage = TotalPages;
+        }
+    }
+
+
+    // =========================================
+    // CHANGE REVIEW FILTER
+    // =========================================
+
+    private void ReviewFilterChanged(ChangeEventArgs e)
+    {
+        selectedReviewFilter =
+            e.Value?.ToString() ?? "All";
+
+
+        currentPage = 1;
+    }
+
+
+    // =========================================
+    // NEXT PAGE
+    // =========================================
+
+    private void NextPage()
+    {
+        if (currentPage < TotalPages)
+        {
+            currentPage++;
+        }
+    }
+
+
+    // =========================================
+    // PREVIOUS PAGE
+    // =========================================
+
+    private void PreviousPage()
+    {
+        if (currentPage > 1)
+        {
+            currentPage--;
+        }
+    }
+}
